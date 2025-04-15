@@ -3,7 +3,7 @@
 # Distributed under the terms of the GNU General Public License v2
 # Copyright 1999-2005 Gentoo Foundation
 # Copyright 2007 Aron Griffis <agriffis@n01se.net>
-# Copyright 2009-##CUR_YEAR## Funtoo Solutions, Inc.
+# Copyright 2009-##CUR_YEAR## Daniel Robbins, Funtoo Solutions, Inc.
 # lockfile() Copyright 2009 Parallels, Inc.
 
 version=##VERSION##
@@ -24,6 +24,7 @@ ignoreopt=false
 noaskopt=false
 noguiopt=false
 nolockopt=false
+nosubopt=false
 lockwait=5
 openssh=unknown
 sunssh=unknown
@@ -150,7 +151,7 @@ testssh() {
 	esac
 	# See if gpg-agent is available and provides ssh-agent functionality:
 	gpgagent_ssh=false
-	if out="$(gpg-agent --help | grep enable-ssh-support)" && [ -n "$out" ]; then
+	if [ "$nosubopt" = "false" ] && out="$(gpg-agent --help | grep enable-ssh-support)" && [ -n "$out" ]; then
 		gpgagent_ssh=true
 	fi
 	debug "openssh=$openssh"
@@ -453,7 +454,7 @@ validinherit() {
 # cat the pid files for the given agents.  This is used by loadagents and also
 # for keychain output when --eval is given.
 catpidf_shell() {
-	debug catpidf_shell $@
+	debug catpidf_shell "$*"
 	case "$1" in
 		*/fish|fish) cp_pidf="$fishpidf" ;;
 		*csh)		 cp_pidf="$cshpidf" ;;
@@ -491,7 +492,7 @@ catpidf() {
 # Load agent variables from $pidf and copy implementation-specific environment
 # variables into generic global strings
 loadagents() {
-	debug loadagents $@
+	debug loadagents "$*"
 	# shellcheck disable=SC2068 # We are expecting multiple space-delimited arguments:
 	for la_a in $@; do
 		case "$la_a" in
@@ -538,7 +539,7 @@ loadagents() {
 # Starts an agent if it isn't already running.
 # Requires $ssh_agent_pid
 startagent() {
-	debug startagent $@
+	debug startagent "$*"
 	start_prog=${1-ssh}
 	# if gpg-agent has ssh-agent support, start it instead:
 	if [ "$start_prog" = "ssh" ] && [ "$gpgagent_ssh" = "true" ]; then
@@ -547,11 +548,9 @@ startagent() {
 	else
 		orig_start_prog=$start_prog
 	fi
-	debug startagent final_agent $start_prog
 	unset start_pid
 	start_inherit_pid=none
 	start_mypids=$(findpids "$start_prog") || die
-	debug startagent found pids $start_mypids
 	# Unfortunately there isn't much way to genericize this without introducing
 	# a lot more supporting code/structures.
 	if [ "$start_prog" = ssh ]; then
@@ -658,7 +657,7 @@ startagent() {
 			else
 				gpg_opts="--daemon $start_gpg_timeout"
 			fi
-			debug gpg_opts $gpg_opts
+			# shellcheck disable=SC2086 # this is intentional:
 			start_out=$(gpg-agent $gpg_opts)
 			started_agents="$started_agents gpg"
 			ret=$?
@@ -690,7 +689,7 @@ SSH2_AGENT_PID=$inherit_ssh2_agent_pid; export SSH2_AGENT_PID;"
 	# according to http://bugs.gentoo.org/show_bug.cgi?id=52874
 	# So make no assumptions.
 	if [ -n "$start_out" ]; then
-		debug add_to_pidfile $start_pidf "$start_out"
+		debug add_to_pidfile "$start_pidf" "$start_out"
 		start_out=$(echo "$start_out" | grep -v 'Agent pid')
 		case "$start_out" in
 			setenv*)
@@ -1169,6 +1168,9 @@ while [ -n "$1" ]; do
 		--nolock)
 			nolockopt=true
 			;;
+		--nosub)
+			nosubopt=true
+			;;
 		--lockwait)
 			shift
 			if [ "$1" -ge 0 ] 2>/dev/null; then
@@ -1587,5 +1589,3 @@ if wantagent gpg; then
 fi
 
 qprint	# trailing newline
-
-# vim:sw=4 noexpandtab tw=120
