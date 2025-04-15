@@ -607,11 +607,7 @@ startagent() {
 				startagent "$start_prog"
 				return $?
 			fi 
-			if [ "${orig_start_prog}" != "${start_prog}" ]; then
-				mesg "Inheriting ${start_prog}-agent ($start_inherit_pid) as ${orig_start_prog}-agent"
-			else
-				mesg "Inheriting ${start_prog}-agent ($start_inherit_pid)"
-			fi
+			mesg "Inheriting ${start_prog}-agent (PID $start_inherit_pid) for ${orig_start_prog}..."
 			;;
 
 		*)
